@@ -31,8 +31,11 @@
 - [Quick start](#quick-start)
 - [Database](#database)
 - [Command handler](#command-handler)
+- [More examples](#more-examples)
 - [New functions in this fork](#new-functions-in-this-fork)
+- [Project structure](#project-structure)
 - [Development](#development)
+- [Troubleshooting](#troubleshooting)
 - [Good to know](#good-to-know)
 - [Credits and license](#credits-and-license)
 
@@ -80,9 +83,11 @@ const client = new AoiClient({
 
 client.command({
     name: "ping",
-    code: `Pong! $pingms`
+    code: `Pong! $ping ms`
 });
 ```
+
+Send `!ping` in a channel the bot can read and it replies with the current gateway latency.
 
 Keep your token out of your source code. Use an environment variable (as above) or a `config.json` that is listed in `.gitignore`.
 
@@ -106,7 +111,7 @@ const client = new AoiClient({
 });
 ```
 
-`securityKey` must be a string of exactly 32 characters. Choose your own and keep it private.
+`securityKey` encrypts your data with AES-256, so it must be exactly 32 characters long (plain letters, numbers and symbols). Choose your own and keep it private.
 
 ## Command handler
 
@@ -118,6 +123,75 @@ client.loadCommands("./commands/", true);
 
 - `./commands/` is the folder that contains your command files.
 - `true` logs each loaded command in the console.
+
+A command file in `./commands/` exports a command object (or an array of them):
+
+```javascript
+// commands/ping.js
+module.exports = {
+    name: "ping",
+    code: `Pong! $ping ms`
+};
+```
+
+## More examples
+
+### Using arguments
+
+`$message` returns everything after the command name, and `$message[1]` returns only the first word.
+
+```javascript
+client.command({
+    name: "say",
+    code: `$message`
+});
+
+client.command({
+    name: "hello",
+    code: `Hello $message[1]!`
+});
+```
+
+### Saving data with variables
+
+Variables need a [database](#database). Declare them once with their default values, then read and write them with `$getVar` and `$setVar`.
+
+```javascript
+client.variables({
+    counter: 0
+});
+
+client.command({
+    name: "add",
+    code: `$setVar[counter;$sum[$getVar[counter];1]]Counter increased.`
+});
+
+client.command({
+    name: "show",
+    code: `Counter: $getVar[counter]`
+});
+```
+
+`$getVar` and `$setVar` use the first table of your database unless you pass a table name as the last argument.
+
+### Combining the new functions
+
+```javascript
+client.command({
+    name: "slug",
+    code: `$slugify[$message]`
+});
+
+client.command({
+    name: "progress",
+    code: `You finished $percentage[$message[1];$message[2];1]% of the tasks.`
+});
+
+client.command({
+    name: "id",
+    code: `Your request ID: $uuid`
+});
+```
 
 ## New functions in this fork
 
@@ -178,6 +252,24 @@ client.command({
 });
 ```
 
+## Project structure
+
+```
+src/
+├── classes/     AoiClient, command loader, database, variables, errors, utilities
+├── core/        interpreter and function reader
+├── events/      Discord event handlers
+├── functions/   every $function, one file per function
+│   ├── array/  client/  components/  condition/  database/
+│   └── embeds/  events/  guild/  math/  misc/
+├── sharding/    shard event handlers
+├── utils/       constants
+└── index.js     package entry point (typings in index.d.ts)
+test/            unit tests
+```
+
+The file name is the function name: `src/functions/math/clamp.js` provides `$clamp`.
+
 ## Development
 
 ```bash
@@ -193,6 +285,17 @@ npm run prettywrite # fix code formatting
 To add a function, create `src/functions/<category>/<name>.js`. It is picked up automatically, and its `$name` becomes available in commands. Add a test for it in `test/functions.test.js`.
 
 The tests run the functions the same way the interpreter does, so they catch both logic mistakes and wrong argument handling. GitHub Actions runs them on Node 20 and 22 for every push and pull request.
+
+## Troubleshooting
+
+| Problem | What to check |
+| --- | --- |
+| The bot is online but ignores commands | Enable the **Message Content Intent** for your bot in the [Discord Developer Portal](https://discord.com/developers/applications), and include `"MessageContent"` in `intents` and `"onMessage"` in `events`. |
+| `$getVar` / `$setVar` says a variable was not found | Declare it with `client.variables({ name: defaultValue })` and make sure a `database` is configured. |
+| Database fails to start | `securityKey` must be exactly 32 characters long. |
+| An `AoiError: Missing Brackets` message appears | The function needs `[...]` arguments, for example `$clamp[15;0;10]`. |
+| Install or startup errors | Use Node.js 20 or newer (`node -v`). |
+| A character like `;` or `]` breaks your text | Escape it with a backslash (`\;`, `\]`) when you want it as plain text inside a function. |
 
 ## Good to know
 
