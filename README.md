@@ -58,7 +58,7 @@ All original aoi.js functions are kept. This fork adds extra utility functions a
 Requires **Node.js 20 or newer**.
 
 ```bash
-npm install github:venxsa/better-aoi.js-fork
+npm install better-aoi.js-fork
 ```
 
 Then import it in your bot:
@@ -67,7 +67,7 @@ Then import it in your bot:
 const { AoiClient } = require("better-aoi.js-fork");
 ```
 
-> If you installed the package under a different name or from a registry, use that name in `require(...)`.
+To try the latest unreleased code from this repository instead, run `npm install github:venxsa/better-aoi.js-fork#v6`.
 
 ## Quick start
 
